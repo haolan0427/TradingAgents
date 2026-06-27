@@ -33,16 +33,13 @@ logger = logging.getLogger(__name__)
 def get_language_instruction() -> str:
     """Return a prompt instruction for the configured output language.
 
-    Returns empty string when English (default), so no extra tokens are used.
-    Applied to every agent whose output reaches the saved report —
-    analysts, researchers, debaters, research manager, trader, and
-    portfolio manager — so a non-English run produces a fully localized
-    report rather than a mix of languages.
+    Currently only Chinese is supported. Applied to every agent whose
+    output reaches the saved report — analysts, researchers, debaters,
+    research manager, trader, and portfolio manager — so a run produces
+    a fully localized Chinese report.
     """
     from tradingagents.dataflows.config import get_config
-    lang = get_config().get("output_language", "English")
-    if lang.strip().lower() == "english":
-        return ""
+    lang = get_config().get("output_language", "Chinese")
     return f" Write your entire response in {lang}."
 
 

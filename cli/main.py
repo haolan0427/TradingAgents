@@ -534,20 +534,8 @@ def get_user_selections():
     )
     analysis_date = get_analysis_date()
 
-    # Step 3: Output language (skipped when set via TRADINGAGENTS_OUTPUT_LANGUAGE)
-    if os.environ.get("TRADINGAGENTS_OUTPUT_LANGUAGE"):
-        output_language = DEFAULT_CONFIG["output_language"]
-        console.print(
-            f"[green]✓ Output language from environment:[/green] {output_language}"
-        )
-    else:
-        console.print(
-            create_question_box(
-                "Step 3: Output Language",
-                "Select the language for analyst reports and final decision"
-            )
-        )
-        output_language = ask_output_language()
+    # Step 3: Output language — only Chinese is supported.
+    output_language = "Chinese"
 
     # Step 4: Select analysts
     console.print(
@@ -937,7 +925,7 @@ def run_analysis(checkpoint: bool = False):
     config["backend_url"] = selections["backend_url"]
     config["llm_provider"] = selections["llm_provider"].lower()
 
-    config["output_language"] = selections.get("output_language", "English")
+    config["output_language"] = selections.get("output_language", "Chinese")
     config["checkpoint_enabled"] = checkpoint
 
     # Create stats callback handler for tracking LLM/tool calls

@@ -32,7 +32,6 @@ class TestCliSkipsPromptsFromEnv(unittest.TestCase):
             "TRADINGAGENTS_DEEP_THINK_LLM": "deepseek-v4-pro",
             "TRADINGAGENTS_QUICK_THINK_LLM": "deepseek-v4-flash",
             "TRADINGAGENTS_LLM_BACKEND_URL": "https://api.deepseek.com",
-            "TRADINGAGENTS_OUTPUT_LANGUAGE": "Japanese",
         }
         fake_cfg = dict(m.DEFAULT_CONFIG)
         fake_cfg.update({
@@ -40,7 +39,6 @@ class TestCliSkipsPromptsFromEnv(unittest.TestCase):
             "backend_url": "https://api.deepseek.com",
             "quick_think_llm": "deepseek-v4-flash",
             "deep_think_llm": "deepseek-v4-pro",
-            "output_language": "Japanese",
         })
 
         with mock.patch.dict(os.environ, env, clear=False), \
@@ -53,14 +51,12 @@ class TestCliSkipsPromptsFromEnv(unittest.TestCase):
              mock.patch.object(m, "select_research_depth", return_value=1), \
              mock.patch.object(m, "ensure_api_key") as ensure_key, \
              mock.patch.object(m, "select_llm_provider") as prompt_provider, \
-             mock.patch.object(m, "ask_output_language") as prompt_lang, \
              mock.patch.object(m, "select_shallow_thinking_agent") as prompt_quick, \
              mock.patch.object(m, "select_deep_thinking_agent") as prompt_deep:
             sel = m.get_user_selections()
 
         # None of the LLM selection prompts should have been shown.
         prompt_provider.assert_not_called()
-        prompt_lang.assert_not_called()
         prompt_quick.assert_not_called()
         prompt_deep.assert_not_called()
         # API key is still verified for the configured provider.
@@ -71,7 +67,8 @@ class TestCliSkipsPromptsFromEnv(unittest.TestCase):
         self.assertEqual(sel["backend_url"], "https://api.deepseek.com")
         self.assertEqual(sel["shallow_thinker"], "deepseek-v4-flash")
         self.assertEqual(sel["deep_thinker"], "deepseek-v4-pro")
-        self.assertEqual(sel["output_language"], "Japanese")
+        # Output language is hardcoded to Chinese; no prompt is shown.
+        self.assertEqual(sel["output_language"], "Chinese")
 
 
 if __name__ == "__main__":

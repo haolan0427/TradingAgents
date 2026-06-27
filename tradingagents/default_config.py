@@ -65,8 +65,8 @@ DEFAULT_CONFIG = _apply_env_overrides({
     # so a crashed run can resume from the last successful step.
     "checkpoint_enabled": False,
     # Output language for analyst reports and final decision
-    # Internal agent debate stays in English for reasoning quality
-    "output_language": "English",
+    # Currently only Chinese is supported.
+    "output_language": "Chinese",
     # Debate and discussion settings
     "max_debate_rounds": 1,
     "max_risk_discuss_rounds": 1,

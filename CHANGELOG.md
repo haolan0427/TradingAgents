@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.3.1] — 2026-06-27
+
+### Removed
+
+- **Multi-language selection prompt.** Removed the `ask_output_language()`
+  function from `cli/utils.py` — all 12 original language options (English,
+  Japanese, Korean, Hindi, Spanish, Portuguese, French, German, Arabic,
+  Russian, and custom) have been deleted. The output language is now
+  hardcoded to Chinese throughout the entire pipeline.
+
+### Changed
+
+- **Output language locked to Chinese.** Step 3 of the CLI (`get_user_selections()`
+  in `cli/main.py`) no longer shows an interactive language prompt or consults
+  the `TRADINGAGENTS_OUTPUT_LANGUAGE` environment variable. `output_language` is
+  unconditionally set to `"Chinese"`.
+- **`get_language_instruction()` simplified** (`tradingagents/agents/utils/agent_utils.py`).
+  The function no longer checks whether the configured language is English and
+  returns early with an empty string — it always produces
+  `" Write your entire response in Chinese."` for every agent prompt.
+- **`DEFAULT_CONFIG` default updated.** `"output_language"` default changed from
+  `"English"` to `"Chinese"`.
+- **Test updated** (`tests/test_cli_env_skip.py`). Removed the `ask_output_language`
+  mock and the `TRADINGAGENTS_OUTPUT_LANGUAGE` env-var assertion; the expected
+  output language is now `"Chinese"`.
+
 ## [0.3.0] — 2026-06-27
 
 ### Removed
@@ -388,6 +414,7 @@ PRs from late 2025 also landed here.
   portfolio manager. LangGraph orchestration, yfinance data, per-agent
   BM25 memory, single-provider OpenAI integration, interactive CLI.
 
+[0.3.1]: https://github.com/TauricResearch/TradingAgents/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.3...v0.2.4
