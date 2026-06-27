@@ -14,20 +14,13 @@ import pytest
 
 @pytest.mark.unit
 class TestProviderDefaultUrl(unittest.TestCase):
-    def test_known_providers_resolve(self):
+    def test_deepseek_resolves(self):
         from cli.utils import provider_default_url
-        self.assertEqual(provider_default_url("openai"), "https://api.openai.com/v1")
         self.assertEqual(provider_default_url("DeepSeek"), "https://api.deepseek.com")
-        self.assertIsNone(provider_default_url("google"))  # uses SDK default
 
     def test_unknown_provider_returns_none(self):
         from cli.utils import provider_default_url
         self.assertIsNone(provider_default_url("not-a-provider"))
-
-    def test_ollama_honors_base_url_env(self):
-        from cli.utils import provider_default_url
-        with mock.patch.dict(os.environ, {"OLLAMA_BASE_URL": "http://host:1234/v1"}):
-            self.assertEqual(provider_default_url("ollama"), "http://host:1234/v1")
 
 
 @pytest.mark.unit
@@ -36,18 +29,17 @@ class TestCliSkipsPromptsFromEnv(unittest.TestCase):
         import cli.main as m
 
         env = {
-            "TRADINGAGENTS_LLM_PROVIDER": "openai",
-            "TRADINGAGENTS_DEEP_THINK_LLM": "kimi-k2.5",
-            "TRADINGAGENTS_QUICK_THINK_LLM": "deepseek-v4-pro",
-            "TRADINGAGENTS_LLM_BACKEND_URL": "https://opencode.ai/zen/go/v1",
+            "TRADINGAGENTS_DEEP_THINK_LLM": "deepseek-v4-pro",
+            "TRADINGAGENTS_QUICK_THINK_LLM": "deepseek-v4-flash",
+            "TRADINGAGENTS_LLM_BACKEND_URL": "https://api.deepseek.com",
             "TRADINGAGENTS_OUTPUT_LANGUAGE": "Japanese",
         }
         fake_cfg = dict(m.DEFAULT_CONFIG)
         fake_cfg.update({
-            "llm_provider": "openai",
-            "backend_url": "https://opencode.ai/zen/go/v1",
-            "quick_think_llm": "deepseek-v4-pro",
-            "deep_think_llm": "kimi-k2.5",
+            "llm_provider": "deepseek",
+            "backend_url": "https://api.deepseek.com",
+            "quick_think_llm": "deepseek-v4-flash",
+            "deep_think_llm": "deepseek-v4-pro",
             "output_language": "Japanese",
         })
 
@@ -71,14 +63,14 @@ class TestCliSkipsPromptsFromEnv(unittest.TestCase):
         prompt_lang.assert_not_called()
         prompt_quick.assert_not_called()
         prompt_deep.assert_not_called()
-        # API key is still verified for the env-configured provider.
+        # API key is still verified for the configured provider.
         ensure_key.assert_called_once()
 
         # The env values flow into the returned selections.
-        self.assertEqual(sel["llm_provider"], "openai")
-        self.assertEqual(sel["backend_url"], "https://opencode.ai/zen/go/v1")
-        self.assertEqual(sel["shallow_thinker"], "deepseek-v4-pro")
-        self.assertEqual(sel["deep_thinker"], "kimi-k2.5")
+        self.assertEqual(sel["llm_provider"], "deepseek")
+        self.assertEqual(sel["backend_url"], "https://api.deepseek.com")
+        self.assertEqual(sel["shallow_thinker"], "deepseek-v4-flash")
+        self.assertEqual(sel["deep_thinker"], "deepseek-v4-pro")
         self.assertEqual(sel["output_language"], "Japanese")
 
 

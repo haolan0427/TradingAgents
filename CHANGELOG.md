@@ -6,6 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.3.0] — 2026-06-27
+
+### Removed
+
+- **All non-DeepSeek LLM providers.** Stripped OpenAI, Google (Gemini),
+  Anthropic (Claude), xAI (Grok), Qwen (DashScope), GLM (Zhipu), MiniMax,
+  OpenRouter, Azure OpenAI, and Ollama from every layer — CLI provider
+  selection, model catalog, client factory, capability table, provider
+  validators, and provider-specific thinking-configuration prompts. The
+  project now exclusively supports DeepSeek as its single LLM provider.
+  (~1 200 lines removed.)
+- **`tradingagents/llm_clients/anthropic_client.py`** — entire Anthropic
+  client module.
+- **`tradingagents/llm_clients/google_client.py`** — entire Google/Gemini
+  client module.
+- **`tradingagents/llm_clients/azure_client.py`** — entire Azure OpenAI
+  client module.
+- **`MinimaxChatOpenAI`** class and its `reasoning_split` injection logic
+  from `openai_client.py`.
+- **Provider-specific thinking configuration** — removed
+  `google_thinking_level`, `openai_reasoning_effort`, `anthropic_effort`
+  from `DEFAULT_CONFIG`, `_get_provider_kwargs()`, and CLI return values.
+- **`_llm_provider_table()`**, **`_fetch_openrouter_models()`**,
+  **`select_openrouter_model()`**, **`ask_openai_reasoning_effort()`**,
+  **`ask_anthropic_effort()`**, **`ask_gemini_thinking_config()`**,
+  **`ask_glm_region()`**, **`ask_qwen_region()`**, **`ask_minimax_region()`**,
+  and **`confirm_ollama_endpoint()`** from `cli/utils.py`.
+- **`tests/test_minimax.py`** — MiniMax-specific test file.
+
+### Changed
+
+- **CLI provider flow simplified.** Step 6 now hardcodes DeepSeek as the
+  sole provider and skips the interactive provider-selection menu entirely.
+  Step 8 (provider-specific thinking configuration) is removed as DeepSeek
+  does not require it. No environment-based fallback branching needed.
+- **`DEFAULT_CONFIG` defaults updated.** `llm_provider` → `"deepseek"`,
+  `deep_think_llm` → `"deepseek-v4-pro"`, `quick_think_llm` →
+  `"deepseek-v4-flash"`.
+- **`_get_provider_kwargs()`** simplified to only forward temperature;
+  all provider-specific thinking/branching removed.
+- **Capability table trimmed.** Removed all MiniMax entries (`_MINIMAX_THINKING`,
+  `_BY_ID` entries, `_BY_PATTERN` entries) from `capabilities.py`.
+- **Model catalog** reduced to only DeepSeek models.
+- **Test files updated** (`test_env_overrides.py`, `test_cli_env_skip.py`,
+  `test_temperature_config.py`, `test_capabilities.py`,
+  `test_ollama_base_url.py`) to reflect DeepSeek-only defaults and
+  remove MiniMax/provider-specific test cases.
+- **`scripts/smoke_structured_output.py`** — `PROVIDER_DEFAULTS` now only
+  contains DeepSeek.
+
+### Fixed
+
+- **Dead-code warnings eliminated.** Invalid escape sequences in docstrings
+  (`\`OLLAMA_BASE_URL\``) and orphaned functions that referenced removed
+  providers have been cleaned up, fixing `SyntaxWarning` on Python 3.14.
+
 ## [0.2.5] — 2026-05-11
 
 ### Added
@@ -332,6 +388,8 @@ PRs from late 2025 also landed here.
   portfolio manager. LangGraph orchestration, yfinance data, per-agent
   BM25 memory, single-provider OpenAI integration, interactive CLI.
 
+[0.3.0]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.5...v0.3.0
+[0.2.5]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.1...v0.2.2
