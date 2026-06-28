@@ -34,9 +34,9 @@ from cli.utils import *
 from cli.announcements import fetch_announcements, display_announcements
 from cli.stats_handler import StatsCallbackHandler
 
-proxy = 'http://127.0.0.1:10808' # set vpn proxy
-os.environ['HTTP_PROXY'] = proxy
-os.environ['HTTPS_PROXY'] = proxy
+# proxy = 'http://127.0.0.1:10808' # set vpn proxy
+# os.environ['HTTP_PROXY'] = proxy
+# os.environ['HTTPS_PROXY'] = proxy
 
 console = Console()
 

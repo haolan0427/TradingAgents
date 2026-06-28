@@ -15,7 +15,9 @@ from typing import Iterable, Optional
 import pandas as pd
 from stockstats import wrap
 
-from tradingagents.dataflows.stockstats_utils import load_ohlcv
+from tradingagents.dataflows.akshare_source import _fetch_ohlcv_df as _akshare_ohlcv
+from tradingagents.dataflows.crypto_source import _fetch_ohlcv_df as _crypto_ohlcv
+from tradingagents.dataflows.symbol_utils import NoMarketDataError
 
 # A fixed, common indicator set so the snapshot is the same shape every run.
 DEFAULT_SNAPSHOT_INDICATORS: tuple[str, ...] = (
@@ -25,24 +27,45 @@ DEFAULT_SNAPSHOT_INDICATORS: tuple[str, ...] = (
 )
 
 
-def _verified_rows(symbol: str, curr_date: str) -> pd.DataFrame:
-    """OHLCV on or before curr_date, date-sorted. Raises if nothing usable.
+def _fetch_ohlcv(symbol: str, curr_date: str) -> pd.DataFrame:
+    """Fetch OHLCV data from the appropriate source (akshare or ccxt).
 
-    ``load_ohlcv`` already normalizes the Date column and filters out
-    look-ahead rows, but we re-apply the cutoff defensively — this is a
-    verification path, so it must not trust its input to be pre-filtered.
+    Routes to akshare for A-share/HK symbols and to ccxt for crypto
+    symbols. Returns a DataFrame with columns ``Date``, ``Open``, ``High``,
+    ``Low``, ``Close``, ``Volume`` sorted ascending by date.
     """
-    data = load_ohlcv(symbol, curr_date)
-    if data is None or data.empty:
+    t = symbol.strip().upper()
+    crypto_suffixes = ("-USD", "-USDT", "-USDC", "-BTC", "-ETH")
+
+    # Use a wide lookback (5 years) so the validator has enough data.
+    # curr_date is the anchor; fetch from 5 years before it.
+    curr_dt = pd.to_datetime(curr_date)
+    start_dt = curr_dt - pd.DateOffset(years=5)
+    start_str = start_dt.strftime("%Y-%m-%d")
+    end_str = curr_dt.strftime("%Y-%m-%d")
+
+    if t.endswith(crypto_suffixes):
+        df = _crypto_ohlcv(symbol, start_str, end_str)
+    elif any(t.endswith(s) for s in (".HK", ".SS", ".SZ")):
+        df = _akshare_ohlcv(symbol, start_str, end_str)
+    else:
+        raise NoMarketDataError(symbol, symbol, "unsupported market")
+
+    if df is None or df.empty:
         raise ValueError(f"No OHLCV data available for {symbol}.")
 
-    df = data.copy()
+    df = df.copy()
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df = df.dropna(subset=["Date"])
-    df = df[df["Date"] <= pd.to_datetime(curr_date)].sort_values("Date")
+    df = df[df["Date"] <= curr_dt].sort_values("Date")
     if df.empty:
         raise ValueError(f"No OHLCV rows on or before {curr_date} for {symbol}.")
     return df
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 
 def _fmt(value) -> str:
@@ -69,7 +92,7 @@ def build_verified_market_snapshot(
     # `df` keeps the original capitalized OHLCV columns (Open/High/Low/Close/
     # Volume); stockstats `wrap()` lowercases columns and adds indicator
     # columns, so read raw prices from `df` and indicators from `stock_df`.
-    df = _verified_rows(symbol, curr_date)
+    df = _fetch_ohlcv(symbol, curr_date)
     stock_df = wrap(df.copy())
 
     selected = tuple(indicators or DEFAULT_SNAPSHOT_INDICATORS)

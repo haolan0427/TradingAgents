@@ -29,7 +29,9 @@ dependencies = [
     "stockstats>=0.6.5",
     "tqdm>=4.67.1",
     "typing-extensions>=4.14.0",
-    "yfinance>=1.4.1",
+    "akshare>=1.16.0",
+    "ccxt>=4.0.0",
+    "yfinance>=1.4.1",  # kept for agent_utils.resolve_instrument_identity and graph reflection,
 ]
 
 [project.scripts]

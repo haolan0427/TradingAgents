@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.4.0] — 2026-07-05
+
+### Added
+
+- **Akshare data source** (`tradingagents/dataflows/akshare_source.py`) — new
+  vendor module for China A-share (.SS/.SZ) and Hong Kong (.HK) markets.
+  Implements all nine data-fetch interfaces (OHLCV, indicators, fundamentals,
+  balance sheet, cash flow, income statement, news, global news, insider
+  transactions). No API key required; data sourced from East Money / Sina /
+  Xueqiu via the local akshare library. (#NEW)
+- **Crypto CCXT data source** (`tradingagents/dataflows/crypto_source.py`) — new
+  vendor module for cryptocurrency markets (-USD, -USDT, etc.). OHLCV and
+  technical indicators fetched via ccxt (Binance); fundamentals, news, and
+  insider-transaction interfaces return a clear ``NOT_APPLICABLE`` message.
+  (#NEW)
+
+### Changed
+
+- **Default data vendor** for all four categories (core_stock_apis,
+  technical_indicators, fundamental_data, news_data) switched from
+  ``"yfinance"`` to ``"akshare"`` in ``DEFAULT_CONFIG``. Crypto symbols are
+  handled transparently by the ``crypto_ccxt`` vendor entry in the router's
+  fallback chain. (#NEW)
+- **``interface.py``** — VENDOR_LIST and VENDOR_METHODS updated to
+  ``["akshare", "crypto_ccxt"]``, replacing the old ``["yfinance",
+  "alpha_vantage"]`` entries.
+- **``market_data_validator.py``** — replaced the ``stockstats_utils.load_ohlcv``
+  dependency (which called yfinance) with an inline ``_fetch_ohlcv()`` function
+  that routes to akshare or ccxt depending on symbol suffix.
+- **Tests updated** — ``test_dataflows_config.py`` expects ``"akshare"`` as
+  the default vendor; ``test_no_data_handling.py`` and
+  ``test_market_data_validator.py`` patched to work with the new vendor names
+  and fetch function.
+
+### Removed
+
+- **Yahoo Finance / Alpha Vantage data sources** — removed 8 files:
+  ``y_finance.py``, ``yfinance_news.py``, ``alpha_vantage.py``,
+  ``alpha_vantage_common.py``, ``alpha_vantage_stock.py``,
+  ``alpha_vantage_indicator.py``, ``alpha_vantage_fundamentals.py``,
+  ``alpha_vantage_news.py``. All no longer referenced after the interface
+  rewrite.
+- **``stockstats_utils.py``** — removed after its only remaining consumer
+  (``market_data_validator.py``) was refactored to fetch data directly from
+  akshare/ccxt.
+- **``test.py``** (root directory) — removed; it was a one-off script that
+  imported the deleted ``y_finance.py``.
+- **``test_stockstats_date_column.py``** — removed; tested the deleted
+  ``stockstats_utils`` module.
+
+
 ## [0.3.2] — 2026-06-28
 
 ### Removed

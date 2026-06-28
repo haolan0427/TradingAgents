@@ -1,28 +1,28 @@
 from typing import Annotated
 
 # Import from vendor-specific modules
-from .y_finance import (
-    get_YFin_data_online,
-    get_stock_stats_indicators_window,
-    get_fundamentals as get_yfinance_fundamentals,
-    get_balance_sheet as get_yfinance_balance_sheet,
-    get_cashflow as get_yfinance_cashflow,
-    get_income_statement as get_yfinance_income_statement,
-    get_insider_transactions as get_yfinance_insider_transactions,
+from .akshare_source import (
+    get_stock_data as get_akshare_stock_data,
+    get_stock_stats_indicators_window as get_akshare_indicators,
+    get_fundamentals as get_akshare_fundamentals,
+    get_balance_sheet as get_akshare_balance_sheet,
+    get_cashflow as get_akshare_cashflow,
+    get_income_statement as get_akshare_income_statement,
+    get_news as get_akshare_news,
+    get_global_news as get_akshare_global_news,
+    get_insider_transactions as get_akshare_insider_transactions,
 )
-from .yfinance_news import get_news_yfinance, get_global_news_yfinance
-from .alpha_vantage import (
-    get_stock as get_alpha_vantage_stock,
-    get_indicator as get_alpha_vantage_indicator,
-    get_fundamentals as get_alpha_vantage_fundamentals,
-    get_balance_sheet as get_alpha_vantage_balance_sheet,
-    get_cashflow as get_alpha_vantage_cashflow,
-    get_income_statement as get_alpha_vantage_income_statement,
-    get_insider_transactions as get_alpha_vantage_insider_transactions,
-    get_news as get_alpha_vantage_news,
-    get_global_news as get_alpha_vantage_global_news,
+from .crypto_source import (
+    get_stock_data as get_crypto_stock_data,
+    get_stock_stats_indicators_window as get_crypto_indicators,
+    get_fundamentals as get_crypto_fundamentals,
+    get_balance_sheet as get_crypto_balance_sheet,
+    get_cashflow as get_crypto_cashflow,
+    get_income_statement as get_crypto_income_statement,
+    get_news as get_crypto_news,
+    get_global_news as get_crypto_global_news,
+    get_insider_transactions as get_crypto_insider_transactions,
 )
-from .alpha_vantage_common import AlphaVantageRateLimitError
 from .symbol_utils import NoMarketDataError
 
 # Configuration and routing logic
@@ -62,51 +62,51 @@ TOOLS_CATEGORIES = {
 }
 
 VENDOR_LIST = [
-    "yfinance",
-    "alpha_vantage",
+    "akshare",
+    "crypto_ccxt",
 ]
 
 # Mapping of methods to their vendor-specific implementations
 VENDOR_METHODS = {
     # core_stock_apis
     "get_stock_data": {
-        "alpha_vantage": get_alpha_vantage_stock,
-        "yfinance": get_YFin_data_online,
+        "akshare": get_akshare_stock_data,
+        "crypto_ccxt": get_crypto_stock_data,
     },
     # technical_indicators
     "get_indicators": {
-        "alpha_vantage": get_alpha_vantage_indicator,
-        "yfinance": get_stock_stats_indicators_window,
+        "akshare": get_akshare_indicators,
+        "crypto_ccxt": get_crypto_indicators,
     },
     # fundamental_data
     "get_fundamentals": {
-        "alpha_vantage": get_alpha_vantage_fundamentals,
-        "yfinance": get_yfinance_fundamentals,
+        "akshare": get_akshare_fundamentals,
+        "crypto_ccxt": get_crypto_fundamentals,
     },
     "get_balance_sheet": {
-        "alpha_vantage": get_alpha_vantage_balance_sheet,
-        "yfinance": get_yfinance_balance_sheet,
+        "akshare": get_akshare_balance_sheet,
+        "crypto_ccxt": get_crypto_balance_sheet,
     },
     "get_cashflow": {
-        "alpha_vantage": get_alpha_vantage_cashflow,
-        "yfinance": get_yfinance_cashflow,
+        "akshare": get_akshare_cashflow,
+        "crypto_ccxt": get_crypto_cashflow,
     },
     "get_income_statement": {
-        "alpha_vantage": get_alpha_vantage_income_statement,
-        "yfinance": get_yfinance_income_statement,
+        "akshare": get_akshare_income_statement,
+        "crypto_ccxt": get_crypto_income_statement,
     },
     # news_data
     "get_news": {
-        "alpha_vantage": get_alpha_vantage_news,
-        "yfinance": get_news_yfinance,
+        "akshare": get_akshare_news,
+        "crypto_ccxt": get_crypto_news,
     },
     "get_global_news": {
-        "yfinance": get_global_news_yfinance,
-        "alpha_vantage": get_alpha_vantage_global_news,
+        "akshare": get_akshare_global_news,
+        "crypto_ccxt": get_crypto_global_news,
     },
     "get_insider_transactions": {
-        "alpha_vantage": get_alpha_vantage_insider_transactions,
-        "yfinance": get_yfinance_insider_transactions,
+        "akshare": get_akshare_insider_transactions,
+        "crypto_ccxt": get_crypto_insider_transactions,
     },
 }
 
@@ -159,8 +159,6 @@ def route_to_vendor(method: str, *args, **kwargs):
 
         try:
             return impl_func(*args, **kwargs)
-        except AlphaVantageRateLimitError:
-            continue  # Rate limits: try the next vendor
         except NoMarketDataError as e:
             last_no_data = e  # No data here; another vendor may have it
             continue
