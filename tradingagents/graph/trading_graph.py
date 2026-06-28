@@ -11,6 +11,90 @@ import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
+
+# ---- Market support validation (shared with propagate()) ----
+
+_SUPPORTED_EXCHANGE_SUFFIXES = {".HK", ".SS", ".SZ"}
+
+_UNSUPPORTED_EXCHANGE_SUFFIXES = {
+    ".NS", ".BO",     # India (NSE, BSE)
+    ".T",              # Tokyo
+    ".L",              # London
+    ".TO",             # Toronto
+    ".AX",             # Australia
+}
+
+_CRYPTO_SUFFIXES = ("-USD", "-USDT", "-USDC", "-BTC", "-ETH")
+
+_SHARE_CLASS_SUFFIXES = frozenset({".A", ".B", ".C", ".U", ".WS"})
+
+
+_SUPPORTED_MARKET_HELP = (
+    "TradingAgents currently supports three markets:\n"
+    "  - Hong Kong stocks: .HK suffix  (e.g. 0700.HK)\n"
+    "  - China A-shares: .SS or .SZ suffix  (e.g. 600519.SS, 000001.SZ)\n"
+    "  - Cryptocurrencies: -USD suffix (e.g. BTC-USD)"
+)
+
+
+def _extract_suffix(ticker: str) -> str | None:
+    """Return the trailing exchange-style suffix of ticker, or None."""
+    idx = ticker.rfind(".")
+    if idx == -1:
+        return None
+    suffix = ticker[idx:]
+    rest = suffix[1:]
+    if rest and rest.isalpha() and rest.isupper() and len(rest) <= 3:
+        return suffix
+    return None
+
+
+def _validate_market_support(ticker: str) -> None:
+    """Raise ``ValueError`` if ``ticker`` belongs to a removed market."""
+    t = ticker.strip().upper()
+
+    if t.endswith(_CRYPTO_SUFFIXES):
+        return
+    if t.startswith("^"):
+        return
+
+    suffix = _extract_suffix(t)
+
+    # No suffix means US stock — no longer supported.
+    if suffix is None:
+        raise ValueError(
+            f"Ticker {t!r} is a US stock (no exchange suffix). "
+            f"US stocks are not supported.\n"
+            f"{_SUPPORTED_MARKET_HELP}"
+        )
+
+    if suffix in _SUPPORTED_EXCHANGE_SUFFIXES:
+        return
+    if suffix in _SHARE_CLASS_SUFFIXES:
+        # Share-class suffixes (BRK.A, BRK.B) are a US convention — rejected.
+        raise ValueError(
+            f"Ticker suffix {suffix!r} is a US share-class notation. "
+            f"US stocks are not supported.\n"
+            f"{_SUPPORTED_MARKET_HELP}"
+        )
+
+    if suffix in _UNSUPPORTED_EXCHANGE_SUFFIXES:
+        _market_name = {
+            ".NS": "India (NSE)", ".BO": "India (BSE)",
+            ".T": "Tokyo", ".L": "London",
+            ".TO": "Canada (Toronto)", ".AX": "Australia (ASX)",
+        }.get(suffix, suffix)
+        raise ValueError(
+            f"Ticker suffix {suffix!r} ({_market_name}) is not supported.\n"
+            f"{_SUPPORTED_MARKET_HELP}"
+        )
+
+    raise ValueError(
+        f"Unrecognised ticker suffix {suffix!r}.\n"
+        f"{_SUPPORTED_MARKET_HELP}"
+    )
+
+
 from langgraph.prebuilt import ToolNode
 
 from tradingagents.llm_clients import create_llm_client
@@ -188,12 +272,10 @@ class TradingAgentsGraph:
         """Pick the benchmark ticker for alpha calculation against ``ticker``.
 
         ``config["benchmark_ticker"]`` overrides everything when set; otherwise
-        the suffix map matches the ticker's exchange suffix (e.g. ``.T`` for
-        Tokyo). US-listed tickers without a dotted suffix fall through to the
-        empty-suffix entry (SPY by default). Unrecognised suffixes (including
-        US tickers with dots like ``BRK.B``) also fall back to the empty-suffix
-        entry, which is the right default because the alpha calculation works
-        in USD.
+        the suffix map matches the ticker's exchange suffix (e.g. ``.HK`` for
+        Hong Kong). By the time this method is called the ticker has already
+        been validated to belong to a supported market, so a missing-suffix
+        fallback is never reached.
         """
         explicit = self.config.get("benchmark_ticker")
         if explicit:
@@ -203,7 +285,7 @@ class TradingAgentsGraph:
         for suffix, benchmark in benchmark_map.items():
             if suffix and ticker_upper.endswith(suffix.upper()):
                 return benchmark
-        return benchmark_map.get("", "SPY")
+        return "SPY"  # safe fallback; should never be reached
 
     def _fetch_returns(
         self, ticker: str, trade_date: str, holding_days: int = 5,
@@ -306,8 +388,16 @@ class TradingAgentsGraph:
         ``checkpoint_enabled`` is set in config, the graph is recompiled with
         a per-ticker SqliteSaver so a crashed run can resume from the last
         successful node on a subsequent invocation with the same ticker+date.
+
+        Raises:
+            ValueError: If ``company_name`` has a ticker suffix that belongs to
+                a removed market (e.g. ``.T``, ``.L``, ``.NS``).
         """
         self.ticker = company_name
+
+        # Validate market support early so the run fails with a clear message
+        # before any network calls or agent computation.
+        _validate_market_support(company_name)
 
         # Resolve any pending memory-log entries for this ticker before the pipeline runs.
         self._resolve_pending_entries(company_name)

@@ -11,8 +11,8 @@ class CryptoAssetModeTests(unittest.TestCase):
         self.assertEqual(detect_asset_type("eth-usd"), AssetType.CRYPTO)
 
     def test_defaults_non_crypto_symbols_to_stock(self):
-        self.assertEqual(detect_asset_type("AAPL"), AssetType.STOCK)
-        self.assertEqual(detect_asset_type("SPY"), AssetType.STOCK)
+        self.assertEqual(detect_asset_type("0700.HK"), AssetType.STOCK)
+        self.assertEqual(detect_asset_type("600519.SS"), AssetType.STOCK)
 
     def test_filters_out_fundamentals_analyst_for_crypto(self):
         analysts = [

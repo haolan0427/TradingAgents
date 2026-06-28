@@ -9,11 +9,11 @@ from tradingagents.agents.utils.agent_utils import build_instrument_context
 @pytest.mark.unit
 class TickerSymbolHandlingTests(unittest.TestCase):
     def test_normalize_ticker_symbol_preserves_exchange_suffix(self):
-        self.assertEqual(normalize_ticker_symbol(" cnc.to "), "CNC.TO")
+        self.assertEqual(normalize_ticker_symbol(" 0700.hk "), "0700.HK")
 
     def test_build_instrument_context_mentions_exact_symbol(self):
-        context = build_instrument_context("7203.T")
-        self.assertIn("7203.T", context)
+        context = build_instrument_context("000001.SZ")
+        self.assertIn("000001.SZ", context)
         self.assertIn("exchange suffix", context)
 
     def test_single_get_ticker_no_shadow(self):

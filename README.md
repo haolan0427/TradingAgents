@@ -173,13 +173,18 @@ You will see a screen where you can select your desired tickers, analysis date, 
 
 ### Markets and tickers
 
-TradingAgents works with any market Yahoo Finance covers, using the exchange-suffixed ticker. Company identity and the alpha benchmark resolve automatically per market.
+TradingAgents supports three markets. The exchange suffix in the ticker determines
+company identity and the alpha benchmark automatically.
 
-- US: `AAPL`, `SPY`
-- Hong Kong: `0700.HK` · Tokyo: `7203.T` · London: `AZN.L`
-- India: `RELIANCE.NS`, `.BO` · Canada: `.TO` · Australia: `.AX`
-- China A-shares: Shanghai `.SS`, Shenzhen `.SZ` (e.g. `600519.SS` for Kweichow Moutai)
-- Crypto: `BTC-USD`, `ETH-USD`
+- **Hong Kong stocks**: `.HK` suffix (e.g. `0700.HK` for Tencent) — benchmark: ^HSI
+- **China A-shares**: `.SS` (Shanghai) or `.SZ` (Shenzhen) suffix
+  (e.g. `600519.SS` for Kweichow Moutai) — benchmark: SSE Composite / SZSE Component
+- **Cryptocurrencies**: `-USD` suffix (e.g. `BTC-USD`, `ETH-USD`)
+
+Tickers from US markets (no suffix or share-class suffixes like `.A`, `.B`)
+and other removed exchanges (Tokyo `.T`, London `.L`, India `.NS`/`.BO`,
+Toronto `.TO`, Australia `.AX`, etc.) are **not supported** and will be
+rejected with a clear error message.
 
 <p align="center">
   <img src="assets/cli/cli_init.png" width="100%" style="display: inline-block; margin: 0 2%;">

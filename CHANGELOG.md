@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.3.2] — 2026-06-28
+
+### Removed
+
+- **All non-HK/CN/crypto market support removed.** Removed seven market
+  categories from the alpha benchmark map and ticker validation: US stocks
+  (no suffix), `.NS`/`.BO` (India), `.T` (Tokyo), `.L` (London), `.TO`
+  (Toronto), `.AX` (Australia). Tickers from these markets are now explicitly
+  rejected with a clear error message.
+
+### Changed
+
+- **`benchmark_map` in `DEFAULT_CONFIG`** trimmed to three entries: `.HK`,
+  `.SS`, and `.SZ`. The `""` (US default SPY) entry is removed. All
+  previously supported regional indices (^NSEI, ^BSESN, ^N225, ^FTSE,
+  ^GSPTSE, ^AXJO) removed.
+- **`cli/utils.py`** — updated `validate_market_support()` to reject US
+  stocks (no suffix) and US share-class suffixes (.A, .B, .C) alongside
+  the previously rejected non-US exchanges.
+- **`tradingagents/graph/trading_graph.py`** — updated `_validate_market_support()`
+  to reject US stocks; updated `_resolve_benchmark()` docstring and fallback.
+- **`README.md`** — updated "Markets and tickers" section: removed US stock
+  listing; kept only Hong Kong, China A-shares, and crypto.
+- **Tests updated** — `test_market_support_validation.py` updated to treat
+  US tickers as rejected; other tests changed from US tickers (AAPL, NVDA,
+  SPY) to supported equivalents.
+
+### Added
+
+- **`tests/test_market_support_validation.py`** — new test file covering
+  allowed tickers (0700.HK, 600519.SS, BTC-USD) and rejected tickers
+  (AAPL, RELIANCE.NS, 7203.T, AZN.L, BRK.B).
+
 ## [0.3.1] — 2026-06-27
 
 ### Removed
@@ -414,6 +447,7 @@ PRs from late 2025 also landed here.
   portfolio manager. LangGraph orchestration, yfinance data, per-agent
   BM25 memory, single-provider OpenAI integration, interactive CLI.
 
+[0.3.2]: https://github.com/TauricResearch/TradingAgents/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/TauricResearch/TradingAgents/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.4...v0.2.5

@@ -12,7 +12,7 @@ from tradingagents.llm_clients.model_catalog import get_model_options
 
 console = Console()
 
-TICKER_INPUT_EXAMPLES = "SPY, 0700.HK, BTC-USD"
+TICKER_INPUT_EXAMPLES = "0700.HK, 600519.SS, BTC-USD"
 
 ANALYST_ORDER = [
     ("Market Analyst", AnalystType.MARKET),
@@ -20,6 +20,18 @@ ANALYST_ORDER = [
     ("News Analyst", AnalystType.NEWS),
     ("Fundamentals Analyst", AnalystType.FUNDAMENTALS),
 ]
+
+# Supported market suffixes (exchange suffixes and crypto pairs).
+_SUPPORTED_EXCHANGE_SUFFIXES = {".HK", ".SS", ".SZ"}
+
+# Known unsupported market suffixes — rejected with a clear error message.
+_UNSUPPORTED_EXCHANGE_SUFFIXES = {
+    ".NS", ".BO",     # India (NSE, BSE)
+    ".T",              # Tokyo
+    ".L",              # London
+    ".TO",             # Toronto
+    ".AX",             # Australia
+}
 
 CRYPTO_SUFFIXES = ("-USD", "-USDT", "-USDC", "-BTC", "-ETH")
 
@@ -50,12 +62,109 @@ def get_ticker() -> str:
         console.print("\n[red]No ticker symbol provided. Exiting...[/red]")
         exit(1)
 
-    return normalize_ticker_symbol(ticker) if ticker.strip() else "SPY"
+    ticker = normalize_ticker_symbol(ticker) if ticker.strip() else ""
+    if not ticker:
+        console.print("[red]No ticker symbol provided. Exiting...[/red]")
+        exit(1)
+    validate_market_support(ticker)
+    return ticker
 
 
 def normalize_ticker_symbol(ticker: str) -> str:
     """Normalize ticker input while preserving exchange suffixes."""
     return ticker.strip().upper()
+
+
+# ---- Market support validation ----
+
+# Share-class suffixes (e.g. BRK.A, BRK.B) that look like exchange suffixes
+# but are purely internal US notations — always allowed.
+_SHARE_CLASS_SUFFIXES = frozenset({".A", ".B", ".C", ".U", ".WS"})
+
+
+_SUPPORTED_MARKET_HELP = (
+    "TradingAgents currently supports three markets:\n"
+    "  - Hong Kong stocks: .HK suffix  (e.g. 0700.HK)\n"
+    "  - China A-shares: .SS or .SZ suffix  (e.g. 600519.SS, 000001.SZ)\n"
+    "  - Cryptocurrencies: -USD suffix (e.g. BTC-USD)"
+)
+
+
+def _extract_suffix(ticker: str) -> str | None:
+    """Return the trailing exchange-style suffix of ticker, or None.
+
+    A suffix is a dot followed by 1-3 uppercase letters at the end, e.g.
+    ".HK", ".SS", ".T", ".L", ".B".  Hyphenated suffixes ("-USD") and
+    caret-prefixed symbols ("^GSPC") are not exchange suffixes.
+    """
+    idx = ticker.rfind(".")
+    if idx == -1:
+        return None
+    suffix = ticker[idx:]
+    # Must be a dot followed by 1-3 uppercase letters
+    rest = suffix[1:]
+    if rest and rest.isalpha() and rest.isupper() and len(rest) <= 3:
+        return suffix
+    return None
+
+
+def validate_market_support(ticker: str) -> None:
+    """Raise ``ValueError`` if ``ticker`` belongs to a removed market.
+
+    Accepts HK (.HK), China A-shares (.SS, .SZ), and crypto (-USD).
+    Rejects US stocks (no suffix or share-class suffix) and all other
+    removed exchanges with a helpful message listing supported markets.
+    """
+    # Normalise once.
+    t = ticker.strip().upper()
+
+    # Allow crypto pairs (hyphenated).
+    if t.endswith(CRYPTO_SUFFIXES):
+        return
+
+    # Allow caret-prefixed index symbols used internally.
+    if t.startswith("^"):
+        return
+
+    suffix = _extract_suffix(t)
+
+    # No suffix means US stock — no longer supported.
+    if suffix is None:
+        raise ValueError(
+            f"Ticker {t!r} is a US stock (no exchange suffix). "
+            f"US stocks are not supported.\n"
+            f"{_SUPPORTED_MARKET_HELP}"
+        )
+
+    # Allow explicitly supported exchange suffixes.
+    if suffix in _SUPPORTED_EXCHANGE_SUFFIXES:
+        return
+
+    # Share-class suffixes (BRK.A, BRK.B) are a US convention — reject.
+    if suffix in _SHARE_CLASS_SUFFIXES:
+        raise ValueError(
+            f"Ticker suffix {suffix!r} is a US share-class notation. "
+            f"US stocks are not supported.\n"
+            f"{_SUPPORTED_MARKET_HELP}"
+        )
+
+    # Reject known-removed exchanges with a specific message.
+    if suffix in _UNSUPPORTED_EXCHANGE_SUFFIXES:
+        _market_name = {
+            ".NS": "India (NSE)", ".BO": "India (BSE)",
+            ".T": "Tokyo", ".L": "London",
+            ".TO": "Canada (Toronto)", ".AX": "Australia (ASX)",
+        }.get(suffix, suffix)
+        raise ValueError(
+            f"Ticker suffix {suffix!r} ({_market_name}) is not supported.\n"
+            f"{_SUPPORTED_MARKET_HELP}"
+        )
+
+    # Any other unknown exchange suffix — reject with generic message.
+    raise ValueError(
+        f"Unrecognised ticker suffix {suffix!r}.\n"
+        f"{_SUPPORTED_MARKET_HELP}"
+    )
 
 
 def detect_asset_type(ticker: str) -> AssetType:

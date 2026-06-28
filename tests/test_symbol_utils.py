@@ -14,16 +14,16 @@ from tradingagents.dataflows.symbol_utils import (
 @pytest.mark.unit
 class TestNormalizeSymbol(unittest.TestCase):
     def test_plain_equities_unchanged(self):
-        for sym in ("AAPL", "MSFT", "TSM", "BRK.B", "0700.HK", "^GSPC", "GC=F"):
+        for sym in ("0700.HK", "600519.SS", "000001.SZ", "^GSPC", "GC=F"):
             self.assertEqual(normalize_symbol(sym), sym)
 
     def test_lowercases_are_upper(self):
-        self.assertEqual(normalize_symbol("aapl"), "AAPL")
-        self.assertEqual(normalize_symbol("  msft  "), "MSFT")
+        self.assertEqual(normalize_symbol("0700.hk"), "0700.HK")
+        self.assertEqual(normalize_symbol("  600519.ss  "), "600519.SS")
 
     def test_metal_aliases_map_to_futures(self):
         self.assertEqual(normalize_symbol("XAUUSD"), "GC=F")
-        self.assertEqual(normalize_symbol("XAUUSD+"), "GC=F")   # broker CFD suffix
+        self.assertEqual(normalize_symbol("XAUUSD+"), "GC=F")
         self.assertEqual(normalize_symbol("xauusd+"), "GC=F")
         self.assertEqual(normalize_symbol("GOLD"), "GC=F")
         self.assertEqual(normalize_symbol("XAGUSD"), "SI=F")
@@ -44,8 +44,6 @@ class TestNormalizeSymbol(unittest.TestCase):
         self.assertEqual(normalize_symbol("ETHUSD"), "ETH-USD")
 
     def test_six_letter_non_currency_left_alone(self):
-        # GOOGLE-style 6-letter tickers that aren't two currency codes
-        # must not be mangled into a fake forex pair.
         self.assertEqual(normalize_symbol("ABCDEF"), "ABCDEF")
 
     def test_empty_input_passthrough(self):
@@ -69,7 +67,7 @@ class TestNoMarketDataError(unittest.TestCase):
 @pytest.mark.unit
 class TestIsYahooSafe(unittest.TestCase):
     def test_accepts_structural_chars(self):
-        for sym in ("AAPL", "GC=F", "^GSPC", "BRK.B", "BTC-USD"):
+        for sym in ("0700.HK", "GC=F", "^GSPC", "BTC-USD"):
             self.assertTrue(is_yahoo_safe(sym))
 
     def test_rejects_slash_and_space(self):
