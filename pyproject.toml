@@ -32,13 +32,17 @@ dependencies = [
     "akshare>=1.16.0",
     "ccxt>=4.0.0",
     "yfinance>=1.4.1",  # kept for agent_utils.resolve_instrument_identity and graph reflection,
+    # Web API server
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "rq>=2.2.0",
 ]
 
 [project.scripts]
 tradingagents = "cli.main:app"
 
 [tool.setuptools.packages.find]
-include = ["tradingagents*", "cli*"]
+include = ["tradingagents*", "cli*", "server*"]
 
 [tool.setuptools.package-data]
 cli = ["static/*"]

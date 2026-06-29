@@ -239,6 +239,194 @@ print(decision)
 
 See `tradingagents/default_config.py` for all configuration options.
 
+## Web API Server
+
+TradingAgents ships with a FastAPI-based HTTP server that exposes the
+analysis pipeline as an async REST API. Submit a ticker + date (plus
+optional analyst selection, research depth, LLM model overrides, and
+report-saving settings) via ``POST /api/analyze``, get back a ``task_id``
+immediately, then poll ``GET /api/result/{task_id}`` until the analysis
+completes.
+
+Three additional endpoints — ``GET /api/info``, ``POST /api/validate``,
+and ``GET /api/health`` — help clients discover supported options,
+validate tickers up front, and verify server liveness.
+
+### Quick Start
+
+```bash
+# Terminal 1: Redis (required for the RQ task queue)
+redis-server
+
+# Terminal 2: RQ worker (macOS requires fork-safe flag)
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+rq worker trading-tasks
+
+# Terminal 3: FastAPI server (reload enabled for development)
+uvicorn server.server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Endpoints
+
+**``GET /api/info``** — Discover supported analysts, research depth options,
+LLM models, and server defaults. Ideal for powering client-side selection
+UI components.
+
+```json
+// Response (HTTP 200)
+{
+  "supported_markets": "Supported: .HK (Hong Kong), .SS/.SZ (China A-shares), -USD (crypto). See validate endpoint.",
+  "supported_suffixes": [".HK", ".SS", ".SZ", "-USD"],
+  "analysts": [
+    { "key": "market",       "label": "Market Analyst",       "supported_asset_types": ["stock", "crypto"] },
+    { "key": "social",       "label": "Sentiment Analyst",   "supported_asset_types": ["stock", "crypto"] },
+    { "key": "news",         "label": "News Analyst",        "supported_asset_types": ["stock", "crypto"] },
+    { "key": "fundamentals", "label": "Fundamentals Analyst", "supported_asset_types": ["stock"] }
+  ],
+  "research_depth_options": [
+    { "label": "Shallow", "value": "shallow", "description": "1 debate round" },
+    { "label": "Medium",  "value": "medium",  "description": "3 debate rounds" },
+    { "label": "Deep",    "value": "deep",    "description": "5 debate rounds" }
+  ],
+  "llm_models": {
+    "quick_think": [
+      { "label": "DeepSeek V4 Flash · quick", "id": "deepseek-v4-flash" }
+    ],
+    "deep_think": [
+      { "label": "DeepSeek V4 Pro · deep", "id": "deepseek-v4-pro" }
+    ]
+  },
+  "defaults": {
+    "analysts": ["market", "social", "news", "fundamentals"],
+    "research_depth": "shallow",
+    "quick_think_llm": "deepseek-v4-flash",
+    "deep_think_llm": "deepseek-v4-pro"
+  }
+}
+```
+
+**``POST /api/validate``** — Validate a ticker and detect its asset type
+(stock / crypto) before submitting a full analysis. Returns a clear
+human-readable message for unsupported markets.
+
+```json
+// Request
+{ "ticker": "0700.HK" }
+
+// Response (HTTP 200)
+{ "valid": true, "ticker": "0700.HK", "asset_type": "stock", "message": "Valid Hong Kong stock ticker" }
+
+// Invalid example
+{ "ticker": "AAPL" }
+// Response (HTTP 200)
+{ "valid": false, "ticker": "AAPL", "asset_type": "unsupported", "message": "Unsupported market. ..." }
+```
+
+**``POST /api/analyze``** — Enqueue a new analysis task. Only ``ticker``
+and ``date`` are required; all other fields are optional and default to the
+server-side configuration.
+
+```json
+// Minimal request
+{ "ticker": "0700.HK", "date": "2024-05-10" }
+
+// Full request with all options
+{
+  "ticker": "0700.HK",
+  "date": "2024-05-10",
+  "analysts": ["market", "social", "news", "fundamentals"],
+  "research_depth": "shallow",
+  "quick_think_llm": "deepseek-v4-flash",
+  "deep_think_llm": "deepseek-v4-pro",
+  "output_language": "Chinese",
+  "save_report": true,
+  "save_path": null
+}
+
+// Response (HTTP 202)
+{ "task_id": "a1b2c3d4e5f67890abcdef1234567890" }
+```
+
+Ticker validation rejects unsupported suffixes with a clear HTTP 422.
+Supported: ``.SS``, ``.SZ``, ``.HK``, ``-USD``.
+
+**``GET /api/result/{task_id}``** — Poll task status and result.
+
+```json
+// While running (HTTP 200)
+{
+  "task_id": "a1b2c3d4...",
+  "status": "running",
+  "progress": { "stage": "running", "message": "Executing propagation" },
+  "decision": null
+}
+
+// Complete (HTTP 200)
+{
+  "task_id": "a1b2c3d4...",
+  "status": "done",
+  "progress": { "stage": "done", "message": "Analysis complete" },
+  "decision": {
+    "ticker": "0700.HK",
+    "date": "2024-05-10",
+    "signal": "Buy",
+    "market_report": "...",
+    "sentiment_report": "...",
+    "news_report": "...",
+    "fundamentals_report": "...",
+    "investment_plan": "...",
+    "trader_proposal": "...",
+    "final_decision": "**Rating**: Buy\n\n**Executive Summary**: ...",
+    "debate": {
+      "bull_vs_bear": "Bull Analyst: ...\nBear Analyst: ...",
+      "risk_discussion": "Aggressive Analyst: ...\nConservative Analyst: ...\nNeutral Analyst: ..."
+    },
+    "_saved_report_path": "/path/to/reports/0700.HK_20240510_123456/complete_report.md"
+  }
+}
+
+// Failed (HTTP 200)
+{
+  "task_id": "a1b2c3d4...",
+  "status": "failed",
+  "progress": { "stage": "failed", "message": "ValueError: ..." },
+  "decision": null,
+  "error": "Traceback (most recent call last):\n..."
+}
+```
+
+**``GET /api/health``** — Health check (returns ``{"status": "ok"}``).
+
+### Configuration
+
+LLM **provider, API keys, and backend URL** are read exclusively from
+environment variables on the server and RQ worker processes for security.
+**Model IDs** (``quick_think_llm`` / ``deep_think_llm``) and
+**output_language** can be overridden per-request in the
+``POST /api/analyze`` body, while the provider credential remains
+server-side only.
+
+```bash
+export REDIS_URL=redis://localhost:6379/0
+export TRADINGAGENTS_LLM_PROVIDER=deepseek
+export DEEPSEEK_API_KEY=sk-...
+export TRADINGAGENTS_DEEP_THINK_LLM=deepseek-v4-pro
+export TRADINGAGENTS_QUICK_THINK_LLM=deepseek-v4-flash
+```
+
+See ``tradingagents/default_config.py`` and the ``.env.example`` file for
+all available ``TRADINGAGENTS_*`` variables.
+
+### Market-aware analyst filtering
+
+The API automatically detects the asset type from the ticker suffix and
+filters non-applicable analysts. For example, the ``fundamentals`` analyst
+is **automatically excluded** for crypto tickers (``BTC-USD``) since
+cryptocurrencies lack traditional financial statements. The
+``GET /api/info`` endpoint exposes each analyst's
+``supported_asset_types`` so client-side UIs can pre-filter the analyst
+selection before submission.
+
 ## Persistence and Recovery
 
 TradingAgents persists two kinds of state across runs.

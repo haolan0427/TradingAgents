@@ -6,6 +6,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.4.1] — 2026-07-06
+
+### Added
+
+- **Enhanced Web API server** (`server/`) — FastAPI-based HTTP backend for
+  submitting trading analysis tasks asynchronously. Five endpoints:
+  ``POST /api/analyze`` (enqueue analysis with full CLI-parity
+  configuration), ``GET /api/result/{task_id}`` (poll decision),
+  ``GET /api/info`` (discover supported analysts, models, and defaults),
+  ``POST /api/validate`` (validate ticker and detect asset type), and
+  ``GET /api/health``. (#NEW)
+- **Full CLI parity in request schema.** ``POST /api/analyze`` now accepts
+  all configuration options previously only available in the interactive
+  CLI: ``analysts`` (select which analyst team members to include),
+  ``research_depth`` (shallow/medium/deep → 1/3/5 debate rounds),
+  ``quick_think_llm`` / ``deep_think_llm`` (override model IDs per-request),
+  ``output_language``, ``save_report``, and ``save_path``. All fields
+  except ``ticker`` and ``date`` are optional and default to server-side
+  configuration.
+- **``GET /api/info`` endpoint** — returns supported markets, analyst list
+  with per-analyst asset-type support (``fundamentals`` only supports
+  ``stock``), research depth options with descriptions, available LLM
+  models for both quick and deep thinking, and server defaults — enabling
+  smart client-side UIs.
+- **``POST /api/validate`` endpoint** — validates ticker suffix and detects
+  asset type (stock / crypto) before submitting a full analysis, with clear
+  human-readable messages for unsupported markets.
+- **Market-aware analyst filtering.** Crypto tickers (``-USD``) automatically
+  exclude the ``fundamentals`` analyst server-side as a safety net, since
+  cryptocurrencies lack traditional financial statements.
+- **Pydantic request/response schemas** (`server/schemas.py`) —
+  ``AnalyzeRequest`` with full optional fields (``analysts``,
+  ``research_depth``, ``quick_think_llm``, ``deep_think_llm``,
+  ``output_language``, ``save_report``, ``save_path``), ``AnalyzeResponse``,
+  ``ResultResponse``, ``DecisionReport`` (individual report fields +
+  ``DebateContent``), ``ProgressInfo``, ``InfoResponse``,
+  ``TickerValidateRequest`` / ``TickerValidateResponse``.
+- **Structured result format.** ``DecisionReport`` now exposes individual
+  report fields (``market_report``, ``sentiment_report``, ``news_report``,
+  ``fundamentals_report``, ``investment_plan``, ``trader_proposal``,
+  ``final_decision``) plus a nested ``debate`` object with
+  ``bull_vs_bear`` and ``risk_discussion`` — mirroring the CLI's
+  ``display_complete_report()`` output.
+- **Disk report saving via API.** When ``save_report: true`` is passed,
+  ``run_propagate()`` writes organised per-section markdown files
+  (``1_analysts/``, ``2_research/``, ``3_trading/``, ``4_risk/``,
+  ``5_portfolio/``) plus a consolidated ``complete_report.md``, matching
+  the CLI's save behaviour. The saved path is returned in
+  ``_saved_report_path``.
+- **RQ background worker** (`server/tasks.py`) — ``run_propagate()`` executes
+  ``TradingAgentsGraph.propagate()`` in a background RQ worker and stores
+  progress + result on the job's Redis meta so the API can serve streaming
+  progress and the final decision.
+
+### Added (dependencies)
+
+- ``fastapi>=0.115.0``, ``uvicorn[standard]>=0.34.0``, ``rq>=2.2.0`` added
+  to ``pyproject.toml``.  The existing ``redis>=6.2.0`` dependency is
+  reused by the RQ worker; no new Redis dependency required.
+
+### Security
+
+- **LLM API keys never leave the server.** The ``POST /api/analyze``
+  request body only accepts ticker, date, model IDs, and analysis
+  configuration; all sensitive LLM configuration (provider, API keys,
+  backend URL) is read exclusively from environment variables on the
+  backend / RQ worker side. Model IDs and output language can be
+  overridden per-request while the provider and keys remain server-side
+  only.
+
+
 ## [0.4.0] — 2026-07-05
 
 ### Added
