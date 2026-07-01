@@ -224,3 +224,6 @@ reports/
 
 # For test code
 tmp/
+
+# OS cache
+.DS_Store

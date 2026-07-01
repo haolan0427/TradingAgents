@@ -1,7 +1,15 @@
-FROM python:3.12-slim AS builder
+# =============================================================================
+# TradingAgents — RQ Worker Dockerfile
+# =============================================================================
+# Build stage
+FROM python:3.13-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -10,19 +18,26 @@ WORKDIR /build
 COPY . .
 RUN pip install --no-cache-dir .
 
-FROM python:3.12-slim
+# ---------------------------------------------------------------------------
+# Runtime stage
+# ---------------------------------------------------------------------------
+FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
 
 COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
 
+# Create unprivileged user + reports directory
 RUN useradd --create-home appuser \
- && install -d -m 0755 -o appuser -g appuser /home/appuser/.tradingagents
+ && install -d -m 0755 -o appuser -g appuser /home/appuser/.tradingagents \
+ && install -d -m 0755 -o appuser -g appuser /home/appuser/app/reports
+
 USER appuser
 WORKDIR /home/appuser/app
 
 COPY --from=builder --chown=appuser:appuser /build .
 
-ENTRYPOINT ["tradingagents"]
+# 默认启动 RQ Worker，消费 trading-tasks 队列
+CMD ["rq", "worker", "trading-tasks"]

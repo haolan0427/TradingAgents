@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.4.3] — 2026-07-07
+
+### Added
+Docker-based deployment and operation.
+
+### Removed
+redundant resources and files
+
 ## [0.4.2] — 2026-07-07
 
 ### Added
