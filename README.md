@@ -28,6 +28,7 @@
 # TradingAgents: Multi-Agents LLM Financial Trading Framework
 
 ## News
+- [2026-07] **TradingAgents v0.4.2** released with an interactive Web UI (`/app/`), a `GET /api/report/{task_id}` download endpoint, Simplified Chinese (简体中文) output enforcement, and a GitHub link update to `haolan0427/TradingAgents`. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 - [2026-05] **TradingAgents v0.2.5** released with the grounded Sentiment Analyst, GPT-5.5 etc. model coverage, Qwen/GLM/MiniMax dual-region support, `TRADINGAGENTS_*` env-var configurability with API-key auto-detection, remote Ollama support, non-US alpha benchmarks, and ticker path-traversal hardening. See [CHANGELOG.md](CHANGELOG.md) for the full list.
 - [2026-04] **TradingAgents v0.2.4** released with structured-output agents (Research Manager, Trader, Portfolio Manager), LangGraph checkpoint resume, persistent decision log, DeepSeek/Qwen/GLM/Azure provider support, Docker, and a Windows UTF-8 encoding fix.
 - [2026-03] **TradingAgents v0.2.3** released with multi-language support, GPT-5.4 family models, unified model catalog, backtesting date fidelity, and proxy support.
@@ -248,9 +249,27 @@ report-saving settings) via ``POST /api/analyze``, get back a ``task_id``
 immediately, then poll ``GET /api/result/{task_id}`` until the analysis
 completes.
 
-Three additional endpoints — ``GET /api/info``, ``POST /api/validate``,
-and ``GET /api/health`` — help clients discover supported options,
-validate tickers up front, and verify server liveness.
+Six endpoints — ``GET /api/info``, ``POST /api/validate``,
+``GET /api/report/{task_id}``, ``GET /api/health``, plus the
+interactive frontend at ``/app/`` and a root redirect — help clients
+discover supported options, validate tickers, download reports, and
+verify server liveness.
+
+### Frontend UI
+
+Point your browser at ``http://localhost:8000`` (or ``/app/``) to access
+the built-in dark-themed web interface. No build step required:
+
+- Configure analysts, research depth, LLM models, and output language
+  via the left-hand panel
+- Validate tickers with the 🔍 button (auto-detects stock vs crypto,
+  filters unavailable analysts)
+- Submit analysis and watch live progress (3 s polling)
+- Download the final ``complete_report.md`` with one click via the
+  ``⬇️ 下载报告`` button
+
+All UI text and the downloaded report are in **Simplified Chinese
+(简体中文)**.
 
 ### Quick Start
 
@@ -395,7 +414,29 @@ Supported: ``.SS``, ``.SZ``, ``.HK``, ``-USD``.
 }
 ```
 
+**``GET /api/report/{task_id}``** — Download the saved report file.
+
+```
+// When ``save_report: true`` was set on the analysis request:
+HTTP 200 — ``complete_report.md`` file download
+Content-Type: text/markdown
+Content-Disposition: attachment; filename="TradingAgents_0700.HK_2024-05-10_complete_report.md"
+
+// When ``save_report`` was false:
+HTTP 404 — {"detail": "Report file was not saved. Re-submit with ``save_report: true``."}
+```
+
 **``GET /api/health``** — Health check (returns ``{"status": "ok"}``).
+
+### Simplified Chinese output
+
+All LLM-generated content — analyst reports, research debates, risk
+assessments, and the final decision — is produced in **Simplified Chinese
+(简体中文)**. Every agent receives the explicit instruction
+``Write your entire response in Simplified Chinese (简体中文)`` at the
+prompt level, preventing the model from defaulting to Traditional Chinese
+(繁體字). The saved report's section headers (``## I. 分析师团队报告``
+etc.) and frontend UI text are also in Simplified Chinese.
 
 ### Configuration
 

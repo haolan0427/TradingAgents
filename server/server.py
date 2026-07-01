@@ -14,8 +14,13 @@ from __future__ import annotations
 import functools
 import logging
 import os
+from pathlib import Path
+
 import redis as _redis
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from rq import Queue
 
 from server.schemas import (
@@ -56,6 +61,26 @@ app = FastAPI(
         "**Step 3**: ``GET /api/result/{task_id}`` — poll until done."
     ),
 )
+
+# CORS — allow frontend from any origin in dev; lock down in production.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Serve the frontend static files.
+_static_dir = Path(__file__).resolve().parent / "static"
+if _static_dir.is_dir():
+    app.mount("/app", StaticFiles(directory=str(_static_dir), html=True), name="frontend")
+
+
+@app.get("/")
+async def root():
+    """Redirect root to the frontend UI."""
+    return RedirectResponse(url="/app/")
 
 # ---------------------------------------------------------------------------
 # Redis / RQ helpers
@@ -339,6 +364,64 @@ async def get_result(task_id: str):
         status="done",
         progress=progress,
         decision=decision,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Download report
+# ---------------------------------------------------------------------------
+
+
+@app.get(
+    "/api/report/{task_id}",
+    description="Download the complete_report.md for a finished analysis task.",
+    responses={
+        404: {"description": "Task not found or report file not available"},
+    },
+)
+async def download_report(task_id: str):
+    """Return the saved ``complete_report.md`` as a file download.
+
+    The report must have been saved (``save_report: true``) when the
+    analysis was submitted.  Returns a plain-text markdown file.
+    """
+    meta = _meta_from_task_id(task_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
+
+    result = meta.get("result")
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Task has not completed yet, or no result available.",
+        )
+
+    report_path = result.get("_saved_report_path")
+    if not report_path:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Report file was not saved. "
+                "Re-submit with ``save_report: true``."
+            ),
+        )
+
+    path = Path(report_path)
+    if not path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Report file no longer exists on disk: {report_path}",
+        )
+
+    ticker = result.get("ticker", "unknown")
+    date = result.get("date", "unknown")
+    filename = f"TradingAgents_{ticker}_{date}_complete_report.md"
+
+    return FileResponse(
+        path=str(path),
+        media_type="text/markdown",
+        filename=filename,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

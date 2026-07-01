@@ -33,13 +33,19 @@ logger = logging.getLogger(__name__)
 def get_language_instruction() -> str:
     """Return a prompt instruction for the configured output language.
 
-    Currently only Chinese is supported. Applied to every agent whose
-    output reaches the saved report — analysts, researchers, debaters,
-    research manager, trader, and portfolio manager — so a run produces
-    a fully localized Chinese report.
+    Currently only Simplified Chinese (简体中文) is supported.  Applied to
+    every agent whose output reaches the saved report — analysts, researchers,
+    debaters, research manager, trader, and portfolio manager — so a run
+    produces a fully localised Simplified Chinese report.
     """
+    # Read language from config; always map to Simplified Chinese so that
+    # ``"Chinese"`` (the default) and any future language code produce the
+    # explicit form ``Simplified Chinese (简体中文)``.  This prevents the LLM
+    # from falling back to Traditional Chinese characters (繁體字).
     from tradingagents.dataflows.config import get_config
     lang = get_config().get("output_language", "Chinese")
+    if lang and lang.lower().startswith("chinese"):
+        return " Write your entire response in Simplified Chinese (简体中文)."
     return f" Write your entire response in {lang}."
 
 

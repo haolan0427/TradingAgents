@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.4.2] — 2026-07-07
+
+### Added
+
+- **Interactive frontend UI** (`server/static/`) — a dark-themed, fully
+  self-contained web interface for the analysis API, served automatically
+  at ``/app/`` by the FastAPI server. Three-file implementation
+  (``index.html`` / ``style.css`` / ``app.js``) with zero build step.
+  Features:
+  - Ticker validation with real-time analyst filtering by asset type
+  - Analyst team checkboxes, research depth radio buttons, LLM model
+    dropdowns, and output language selection
+  - Live progress polling (every 3 s) with status badges and progress bar
+  - Tabbed result display with signal badge, summary, and error view
+- **``GET /api/report/{task_id}`` endpoint** — downloads the saved
+  ``complete_report.md`` as a file. Returns the file directly when
+  ``save_report: true`` was set on the original request, or a clear 404
+  message if the report was not saved. The frontend shows an
+  ``⬇️ 下载报告`` button once analysis completes.
+- **Simplified Chinese (简体中文) output enforcement.**
+  ``get_language_instruction()`` in ``agent_utils.py`` now explicitly
+  instructs every agent to write in ``Simplified Chinese (简体中文)``,
+  preventing the LLM from falling back to Traditional Chinese characters
+  (繁體字). All saved report section headers in ``tasks.py`` (
+  ``_save_report_to_disk``) changed from English to Simplified Chinese
+  (e.g. ``## I. Analyst Team Reports`` → ``## I. 分析师团队报告``).
+- **CORS middleware** — ``server/server.py`` adds ``CORSMiddleware`` with
+  ``allow_origins=["*"]`` so the frontend works seamlessly in development.
+
+### Changed
+
+- **Frontend simplified to single-tab layout.** The Web UI reduces to a
+  single ``摘要`` (Summary) tab containing ticker/date/signal, investment
+  plan, and trader proposal; the previously separate ``分析师报告``,
+  ``辩论内容``, and ``完整决策`` tabs are removed for a cleaner workflow.
+- **Root ``/`` redirects to frontend.** ``GET /`` now returns a
+  ``RedirectResponse`` pointing to ``/app/`` so opening the server URL in a
+  browser shows the UI immediately.
+- **Frontend date default fixed.** ``app.js`` now uses local date
+  components (``getFullYear``, ``getMonth``, ``getDate``) instead of
+  ``toISOString()``, which caused a date-off-by-one-day bug in UTC+8
+  timezones.
+- **Footer GitHub link updated** from ``TauricResearch/TradingAgents`` to
+  ``haolan0427/TradingAgents`` in the frontend footer.
+
+### Fixed
+
+- **Date picker unresponsive in UTC+8 timezones.** The frontend date input
+  now correctly shows and accepts user selections regardless of timezone.
+
+
 ## [0.4.1] — 2026-07-06
 
 ### Added
@@ -569,14 +620,17 @@ PRs from late 2025 also landed here.
   portfolio manager. LangGraph orchestration, yfinance data, per-agent
   BM25 memory, single-provider OpenAI integration, interactive CLI.
 
-[0.3.2]: https://github.com/TauricResearch/TradingAgents/compare/v0.3.1...v0.3.2
-[0.3.1]: https://github.com/TauricResearch/TradingAgents/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.5...v0.3.0
-[0.2.5]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.4...v0.2.5
-[0.2.4]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.3...v0.2.4
-[0.2.3]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.2...v0.2.3
-[0.2.2]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.1...v0.2.2
-[0.2.1]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/TauricResearch/TradingAgents/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/TauricResearch/TradingAgents/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/TauricResearch/TradingAgents/releases/tag/v0.1.0
+[0.4.2]: https://github.com/haolan0427/TradingAgents/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/haolan0427/TradingAgents/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/haolan0427/TradingAgents/compare/v0.3.2...v0.4.0
+[0.3.2]: https://github.com/haolan0427/TradingAgents/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/haolan0427/TradingAgents/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/haolan0427/TradingAgents/compare/v0.2.5...v0.3.0
+[0.2.5]: https://github.com/haolan0427/TradingAgents/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/haolan0427/TradingAgents/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/haolan0427/TradingAgents/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/haolan0427/TradingAgents/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/haolan0427/TradingAgents/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/haolan0427/TradingAgents/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/haolan0427/TradingAgents/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/haolan0427/TradingAgents/releases/tag/v0.1.0

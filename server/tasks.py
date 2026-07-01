@@ -101,10 +101,10 @@ def _save_report_to_disk(
     analysts_dir = save_path / "1_analysts"
     analyst_parts = []
     for key, label, field in [
-        ("market", "Market Analyst", "market_report"),
-        ("social", "Sentiment Analyst", "sentiment_report"),
-        ("news", "News Analyst", "news_report"),
-        ("fundamentals", "Fundamentals Analyst", "fundamentals_report"),
+        ("market", "市场分析师", "market_report"),
+        ("social", "情绪分析师", "sentiment_report"),
+        ("news", "新闻分析师", "news_report"),
+        ("fundamentals", "基本面分析师", "fundamentals_report"),
     ]:
         content = final_state.get(field, "")
         if content:
@@ -114,7 +114,7 @@ def _save_report_to_disk(
 
     if analyst_parts:
         sections.append(
-            f"## I. Analyst Team Reports\n\n"
+            "## I. 分析师团队报告\n\n"
             + "\n\n".join(analyst_parts)
         )
 
@@ -124,9 +124,9 @@ def _save_report_to_disk(
         research_dir = save_path / "2_research"
         research_parts = []
         for key, label, field in [
-            ("bull", "Bull Researcher", "bull_history"),
-            ("bear", "Bear Researcher", "bear_history"),
-            ("manager", "Research Manager", "judge_decision"),
+            ("bull", "多头研究员", "bull_history"),
+            ("bear", "空头研究员", "bear_history"),
+            ("manager", "研究经理", "judge_decision"),
         ]:
             content = debate.get(field, "")
             if content:
@@ -136,17 +136,17 @@ def _save_report_to_disk(
 
         if research_parts:
             sections.append(
-                f"## II. Research Team Decision\n\n"
+                f"## II. 研究团队决策\n\n"
                 + "\n\n".join(research_parts)
             )
 
-    # 3. Trading
+    # 3. 交易计划
     trader_plan = final_state.get("trader_investment_plan", "")
     if trader_plan:
         trading_dir = save_path / "3_trading"
         trading_dir.mkdir(parents=True, exist_ok=True)
         (trading_dir / "trader.md").write_text(trader_plan, encoding="utf-8")
-        sections.append(f"## III. Trading Team Plan\n\n### Trader\n{trader_plan}")
+        sections.append(f"## III. 交易团队计划\n\n### 交易员\n{trader_plan}")
 
     # 4. Risk Management
     risk = final_state.get("risk_debate_state", {})
@@ -154,9 +154,9 @@ def _save_report_to_disk(
         risk_dir = save_path / "4_risk"
         risk_parts = []
         for key, label, field in [
-            ("aggressive", "Aggressive Analyst", "aggressive_history"),
-            ("conservative", "Conservative Analyst", "conservative_history"),
-            ("neutral", "Neutral Analyst", "neutral_history"),
+            ("aggressive", "激进分析师", "aggressive_history"),
+            ("conservative", "保守分析师", "conservative_history"),
+            ("neutral", "中性分析师", "neutral_history"),
         ]:
             content = risk.get(field, "")
             if content:
@@ -166,25 +166,25 @@ def _save_report_to_disk(
 
         if risk_parts:
             sections.append(
-                f"## IV. Risk Management Team Decision\n\n"
+                f"## IV. 风险管理团队决策\n\n"
                 + "\n\n".join(risk_parts)
             )
 
-        # 5. Portfolio Manager
+        # 5. 投资组合经理
         pm_decision = risk.get("judge_decision", "")
         if pm_decision:
             portfolio_dir = save_path / "5_portfolio"
             portfolio_dir.mkdir(parents=True, exist_ok=True)
             (portfolio_dir / "decision.md").write_text(pm_decision, encoding="utf-8")
             sections.append(
-                f"## V. Portfolio Manager Decision\n\n"
-                f"### Portfolio Manager\n{pm_decision}"
+                f"## V. 投资组合经理决策\n\n"
+                f"### 投资组合经理\n{pm_decision}"
             )
 
     # Write consolidated report
     header = (
-        f"# Trading Analysis Report: {ticker}\n\n"
-        f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        f"# 交易分析报告: {ticker}\n\n"
+        f"生成时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
     )
     report_path = save_path / "complete_report.md"
     report_path.write_text(header + "\n\n".join(sections), encoding="utf-8")

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradingAgents Web API</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>📈 TradingAgents 分析面板</h1>
+      <span class="version" id="apiVersion">v0.2.0</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 左侧：配置表单 -->
+    <section class="card config-panel" id="configPanel">
+      <h2>⚙️ 分析配置</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ticker">股票代码 *</label>
+          <div class="input-with-btn">
+            <input type="text" id="ticker" placeholder='例如: 0700.HK / 600519.SS / BTC-USD' value="0700.HK">
+            <button id="validateBtn" class="btn btn-sm" title="验证股票代码">🔍</button>
+          </div>
+          <span class="hint">支持: .HK .SS .SZ -USD</span>
+          <span id="tickerStatus" class="validation-msg"></span>
+        </div>
+        <div class="form-group">
+          <label for="date">分析日期 *</label>
+          <input type="date" id="date">
+          <span class="hint">选择要回测的历史日期</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>分析师团队</label>
+        <div class="check-group" id="analystsGroup">
+          <!-- 由 JS 动态生成 -->
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>研究深度</label>
+        <div class="radio-group" id="depthGroup">
+          <label><input type="radio" name="depth" value="shallow"> 浅度（1 轮辩论）</label>
+          <label><input type="radio" name="depth" value="medium" checked> 中等（3 轮辩论）</label>
+          <label><input type="radio" name="depth" value="deep"> 深度（5 轮辩论）</label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quickLlm">快速模型</label>
+          <select id="quickLlm"></select>
+        </div>
+        <div class="form-group">
+          <label for="deepLlm">深度模型</label>
+          <select id="deepLlm"></select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="language">输出语言</label>
+          <select id="language">
+            <option value="Chinese">中文</option>
+            <option value="English">English</option>
+          </select>
+        </div>
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="saveReport" checked>
+            保存报告到磁盘
+          </label>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="submitBtn" class="btn btn-primary" disabled>🚀 提交分析</button>
+      </div>
+    </section>
+
+    <!-- 右侧：结果面板 -->
+    <section class="card result-panel" id="resultPanel">
+      <h2>📊 分析结果</h2>
+
+      <!-- 状态卡片 -->
+      <div id="statusCard" class="status-card hidden">
+        <div class="status-header">
+          <span class="status-badge" id="statusBadge">等待中</span>
+          <span class="task-id" id="taskIdDisplay"></span>
+        </div>
+        <div class="progress-bar-container" id="progressBarContainer">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <p class="status-message" id="statusMessage">请提交一个分析任务</p>
+      </div>
+
+      <!-- 结果卡片 -->
+      <div id="decisionCard" class="hidden">
+        <div class="decision-header">
+          <div class="signal-badge" id="signalBadge">—</div>
+          <button id="downloadBtn" class="btn btn-download hidden">⬇️ 下载报告</button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="summary">摘要</button>
+        </div>
+
+        <div class="tab-content">
+          <!-- 摘要 -->
+          <div class="tab-pane active" id="tab-summary">
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="label">股票</span>
+                <span class="value" id="resultTicker">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">日期</span>
+                <span class="value" id="resultDate">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">信号</span>
+                <span class="value" id="resultSignal">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">保存路径</span>
+                <span class="value" id="resultSavedPath">—</span>
+              </div>
+            </div>
+            <h4>投资计划</h4>
+            <div class="markdown-content" id="resultInvestmentPlan">—</div>
+            <h4>交易提案</h4>
+            <div class="markdown-content" id="resultTraderProposal">—</div>
+          <!-- 摘要结束 -->
+        </div>
+      </div>
+
+      <!-- 错误信息 -->
+      <div id="errorCard" class="error-card hidden">
+        <h3>❌ 任务失败</h3>
+        <pre id="errorDetail"></pre>
+      </div>
+
+      <!-- 空状态 -->
+      <div id="emptyState" class="empty-state">
+        <p>配置左侧参数并点击"提交分析"开始</p>
+        <p class="hint">也可以先点击 🔍 验证股票代码</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>TradingAgents · Multi-Agent LLM Trading Framework · <a href="https://github.com/haolan0427/TradingAgents" target="_blank">GitHub</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
