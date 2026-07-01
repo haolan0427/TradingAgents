@@ -295,6 +295,7 @@ async def analyze(body: AnalyzeRequest):
         output_language=body.output_language,
         save_report=body.save_report or False,
         save_path=body.save_path,
+        proxy=body.proxy,
         meta={
             "status": "pending",
             "progress": {"stage": "queued", "message": "Task queued"},
@@ -368,6 +369,33 @@ async def get_result(task_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Container-to-host path translation
+# ---------------------------------------------------------------------------
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# When the worker runs inside Docker, it saves reports under
+# /home/appuser/app/reports/.  The same directory is bind-mounted
+# to ./reports on the host, so we translate the path prefix.
+_CONTAINER_REPORTS_PREFIX = "/home/appuser/app/reports"
+_HOST_REPORTS_DIR = _PROJECT_ROOT / "reports"
+
+
+def _resolve_report_path(report_path: str) -> Path:
+    """Translate a potentially container-internal path to the host path."""
+    p = Path(report_path)
+    if p.is_file():
+        return p
+    # Translate container prefix to host path
+    if str(p).startswith(_CONTAINER_REPORTS_PREFIX):
+        relative = str(p)[len(_CONTAINER_REPORTS_PREFIX):]
+        relative = relative.lstrip("/")
+        host_path = _HOST_REPORTS_DIR / relative
+        if host_path.is_file():
+            return host_path
+    return p
+
+
+# ---------------------------------------------------------------------------
 # Download report
 # ---------------------------------------------------------------------------
 
@@ -406,7 +434,7 @@ async def download_report(task_id: str):
             ),
         )
 
-    path = Path(report_path)
+    path = _resolve_report_path(report_path)
     if not path.is_file():
         raise HTTPException(
             status_code=404,

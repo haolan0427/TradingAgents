@@ -248,6 +248,7 @@ def run_propagate(
     output_language: str | None = None,
     save_report: bool = False,
     save_path: str | None = None,
+    proxy: str | None = None,
 ) -> None:
     """RQ job: run ``TradingAgentsGraph.propagate()`` and persist result.
 
@@ -266,6 +267,25 @@ def run_propagate(
         raise RuntimeError("run_propagate must be called from within an RQ worker")
 
     try:
+        # Apply proxy if provided (for crypto data sources like Binance/CCXT).
+        if proxy:
+            # Inside Docker, 127.0.0.1 refers to the container, not the host.
+            # Translate it so the container can reach the host's proxy.
+            if os.path.exists("/.dockerenv"):
+                proxy = proxy.replace("127.0.0.1", "host.docker.internal")
+                proxy = proxy.replace("localhost", "host.docker.internal")
+
+            logger.info("Proxy configured: %s (if no proxy is running, leave the proxy field empty in the UI)", proxy)
+            os.environ["HTTP_PROXY"] = proxy
+            os.environ["HTTPS_PROXY"] = proxy
+            # Only proxy traffic to crypto data sources (CCXT/Binance).
+            # DeepSeek API calls must go direct — no proxy.
+            os.environ["NO_PROXY"] = (
+                "localhost,127.0.0.1,api.deepseek.com,.deepseek.com,"
+                "0.0.0.0,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+            )
+            logger.info("Proxy set to %s (NO_PROXY: %s)", proxy, os.environ["NO_PROXY"])
+
         _set_meta(job, "running", "Starting analysis pipeline")
 
         # Resolve analysts

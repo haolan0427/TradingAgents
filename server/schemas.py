@@ -211,6 +211,14 @@ class AnalyzeRequest(BaseModel):
             "the server."
         ),
     )
+    proxy: Optional[str] = Field(
+        default=None,
+        description=(
+            "Proxy address for cryptocurrency data source access. "
+            "Only needed for crypto tickers (e.g. BTC-USD). "
+            "Format: http://127.0.0.1:PORT (e.g. http://127.0.0.1:10808)"
+        ),
+    )
     save_path: Optional[str] = Field(
         default=None,
         description=(

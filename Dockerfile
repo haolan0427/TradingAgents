@@ -18,6 +18,11 @@ WORKDIR /build
 COPY . .
 RUN pip install --no-cache-dir .
 
+# Remove the server and cli packages from site-packages so that the
+# runtime volume mount (./server, ./cli) takes precedence at import time.
+RUN rm -rf /opt/venv/lib/python*/site-packages/server \
+ && rm -rf /opt/venv/lib/python*/site-packages/cli
+
 # ---------------------------------------------------------------------------
 # Runtime stage
 # ---------------------------------------------------------------------------

@@ -160,6 +160,20 @@ input:focus, select:focus {
   margin-top: 4px;
 }
 
+.proxy-prefix {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
 .validation-msg {
   display: block;
   font-size: 12px;

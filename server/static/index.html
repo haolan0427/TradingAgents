@@ -28,6 +28,15 @@
           </div>
           <span class="hint">支持: .HK .SS .SZ -USD</span>
           <span id="tickerStatus" class="validation-msg"></span>
+          <!-- Proxy input: shown only when crypto asset is detected -->
+          <div id="proxyGroup" class="form-group hidden" style="margin-top: 8px;">
+            <label for="proxyPort">🌐 代理端口（加密货币需要，填入本机代理端口）</label>
+            <div class="input-with-btn">
+              <span class="proxy-prefix">http://127.0.0.1:</span>
+              <input type="number" id="proxyPort" placeholder="10808" value="" min="1" max="65535" style="width: 120px;">
+            </div>
+            <span class="hint">Docker 环境下自动使用 host.docker.internal，无需担心地址问题</span>
+          </div>
         </div>
         <div class="form-group">
           <label for="date">分析日期 *</label>

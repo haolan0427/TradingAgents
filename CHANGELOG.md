@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Breaking changes within the 0.x line are called out explicitly.
 
+## [0.4.4] — 2026-07-07
+
+### Added
+
+- **Cryptocurrency proxy support** — frontend proxy port input (``server/static/``)
+  auto-appears when a crypto ticker (``-USD``, ``-USDT``, etc.) is detected.
+  The port is sent alongside the analysis request and applied to the RQ worker
+  as ``HTTP_PROXY`` / ``HTTPS_PROXY``, enabling Yahoo Finance data access for
+  crypto symbols from behind a firewall or GFW.
+- **Container-to-host path translation** (``server/server.py``) — the
+  ``download_report`` endpoint now translates Docker-internal report paths
+  (``/home/appuser/app/reports/...``) to the host filesystem
+  (``./reports/...``) so downloaded reports work regardless of whether the
+  analyzer ran inside or outside Docker.
+- **Auto-detection of Docker environment** (``server/tasks.py``) — the proxy
+  address ``127.0.0.1`` is automatically replaced with
+  ``host.docker.internal`` when the worker detects it is running inside a
+  container, so the proxy reaches the host machine.
+- **Live code mounting** — ``docker-compose.yml`` now binds ``./server`` into
+  the worker container, and ``./reports`` into the host filesystem, so code
+  changes take effect without rebuilding the Docker image.
+
+### Changed
+
+- **``docker-compose.yml``** — ``reports_data`` named volume replaced with a
+  host bind mount (``./reports:/home/appuser/app/reports``) so saved reports
+  persist on the host and are accessible for download.
+- **``Dockerfile``** — build stage now removes ``server`` and ``cli`` packages
+  from ``site-packages`` after ``pip install``, ensuring the runtime volume
+  mount takes precedence at import time.
+- **Frontend proxy hint** updated to indicate Docker address translation is
+  handled automatically.
+
+### Fixed
+
+- **``openai.APIConnectionError`` for crypto analysis** — the global
+  ``HTTP_PROXY`` was routing DeepSeek API calls through the proxy, causing
+  connection failures. Added ``NO_PROXY`` with ``api.deepseek.com`` and
+  internal IP ranges so only Yahoo Finance traffic uses the proxy.
+- **``TypeError: run_propagate() got an unexpected keyword argument 'proxy'``**
+  — the ``server`` package installed in ``site-packages`` during Docker build
+  shadowed the mounted source code. Fixed by removing ``server`` from
+  ``site-packages`` in the Dockerfile build stage.
+- **Download report path not found** — the saved report path stored in Redis
+  was a container-internal path (``/home/appuser/app/reports/...``) that did
+  not exist on the host. Added ``_resolve_report_path()`` to translate the
+  prefix to the host ``./reports/`` directory.
+- **Crypto proxy not reachable from Docker** — ``127.0.0.1`` inside a
+  container refers to the container itself, not the host. Auto-translate to
+  ``host.docker.internal`` when ``/.dockerenv`` is detected.
+
 ## [0.4.3] — 2026-07-07
 
 ### Added
@@ -628,17 +679,19 @@ PRs from late 2025 also landed here.
   portfolio manager. LangGraph orchestration, yfinance data, per-agent
   BM25 memory, single-provider OpenAI integration, interactive CLI.
 
+[0.4.4]: https://github.com/haolan0427/TradingAgents/compare/v0.4.3...v0.4.4
+[0.4.3]: https://github.com/haolan0427/TradingAgents/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/haolan0427/TradingAgents/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/haolan0427/TradingAgents/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/haolan0427/TradingAgents/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/haolan0427/TradingAgents/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/haolan0427/TradingAgents/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/haolan0427/TradingAgents/compare/v0.2.5...v0.3.0
-[0.2.5]: https://github.com/haolan0427/TradingAgents/compare/v0.2.4...v0.2.5
-[0.2.4]: https://github.com/haolan0427/TradingAgents/compare/v0.2.3...v0.2.4
-[0.2.3]: https://github.com/haolan0427/TradingAgents/compare/v0.2.2...v0.2.3
-[0.2.2]: https://github.com/haolan0427/TradingAgents/compare/v0.2.1...v0.2.2
-[0.2.1]: https://github.com/haolan0427/TradingAgents/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/haolan0427/TradingAgents/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/haolan0427/TradingAgents/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/haolan0427/TradingAgents/releases/tag/v0.1.0
+[0.2.5]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/TauricResearch/TradingAgents/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/TauricResearch/TradingAgents/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/TauricResearch/TradingAgents/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/TauricResearch/TradingAgents/releases/tag/v0.1.0

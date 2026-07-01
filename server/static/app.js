@@ -128,6 +128,30 @@ function onTickerChange() {
   const statusEl = document.getElementById("tickerStatus");
   statusEl.className = "validation-msg";
   statusEl.textContent = "点击 🔍 验证";
+
+  // Auto-detect crypto tickers from suffix and show proxy field immediately
+  const ticker = document.getElementById("ticker").value.trim().toUpperCase();
+  const proxyGroup = document.getElementById("proxyGroup");
+  if (ticker.endsWith("-USD") || ticker.endsWith("-USDT") || ticker.endsWith("-USDC") || ticker.endsWith("-BTC") || ticker.endsWith("-ETH")) {
+    proxyGroup.classList.remove("hidden");
+    // Also auto-disable fundamentals analyst
+    document.querySelectorAll('input[name="analyst"]').forEach((cb) => {
+      if (cb.value === "fundamentals") {
+        cb.checked = false;
+        cb.disabled = true;
+        cb.closest("label").style.opacity = "0.4";
+      }
+    });
+  } else {
+    proxyGroup.classList.add("hidden");
+    // Re-enable fundamentals analyst
+    document.querySelectorAll('input[name="analyst"]').forEach((cb) => {
+      if (cb.value === "fundamentals") {
+        cb.disabled = false;
+        cb.closest("label").style.opacity = "1";
+      }
+    });
+  }
 }
 
 function filterAnalystsByAsset(assetType) {
@@ -139,6 +163,14 @@ function filterAnalystsByAsset(assetType) {
     // 视觉提示
     cb.closest("label").style.opacity = isSupported ? "1" : "0.4";
   });
+
+  // Show/hide proxy input for crypto assets
+  const proxyGroup = document.getElementById("proxyGroup");
+  if (assetType === "crypto") {
+    proxyGroup.classList.remove("hidden");
+  } else {
+    proxyGroup.classList.add("hidden");
+  }
 }
 
 // ---- 提交分析 ----
@@ -175,6 +207,16 @@ async function submitAnalysis() {
   const language = document.getElementById("language").value;
   const saveReport = document.getElementById("saveReport").checked;
 
+  // Check if proxy is set (for crypto). 用户必须显式填入端口号才会使用代理
+  let proxy = null;
+  const proxyGroup = document.getElementById("proxyGroup");
+  if (!proxyGroup.classList.contains("hidden")) {
+    const port = document.getElementById("proxyPort").value.trim();
+    if (port) {
+      proxy = `http://127.0.0.1:${port}`;
+    }
+  }
+
   const body = {
     ticker,
     date,
@@ -184,6 +226,7 @@ async function submitAnalysis() {
     deep_think_llm: deepLlm,
     output_language: language,
     save_report: saveReport,
+    proxy,
   };
 
   // 隐藏旧结果
